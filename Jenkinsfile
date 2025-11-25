@@ -1,61 +1,51 @@
 // Jenkinsfile
 pipeline {
-    agent any // Use any available agent (the Windows machine running Jenkins)
-
-    
+    agent any
 
     environment {
-        // Replace with your actual Docker Hub username and Roll Number
-        DOCKER_IMAGE = "yourusername/your-roll-number-app"
+        // !! UPDATE THIS: Replace with your actual Docker Hub username and Roll Number !!
+        DOCKER_IMAGE = "parv1601/imt2023514-app"
     }
 
     stages {
         stage('Pull Code') {
             steps {
-                // The pipeline script from SCM handles the checkout
                 echo "--- Pulling code from GitHub..."
             }
         }
 
-        stage('Install Dependencies & Build') {
-            steps {
-                // We install dependencies inside the build stage using the Dockerfile
-                // For a separate build step, you might run 'pip install -r requirements.txt' here.
-                echo "--- Dependencies installed/built based on requirements.txt"
-            }
-        }
-
-        stage('Test (Pytest)') {
+        stage('Test (Pytest in Docker)') {
             steps {
                 script {
-                    echo "--- Running automated Pytest tests..."
+                    echo "--- Running automated Pytest tests inside a Docker container..."
                     
-                    // Run pytest using the system's python installation
-                    // This command must be executed on the Jenkins agent
-                    // The '--junitxml' flag is for generating test reports later (optional)
-                    try {
-                        sh 'pip install -r requirements.txt' // Ensure tests can run
-                        sh 'python -m pytest test_calculator.py' // Execute the tests
-                        echo "Tests passed successfully!"
-                    } catch (error) {
-                        echo "Tests failed! Aborting pipeline."
-                        error("Tests failed")
-                    }
+                    // The 'sh' command runs the tests inside a temporary 'python:3.9-slim' container.
+                    // -v "${PWD}":/app mounts the current Jenkins workspace into the container.
+                    // -w /app sets the working directory inside the container.
+                    // /bin/bash -c "..." chains the dependency installation and the test command.
+                    sh '''
+                        docker run --rm \
+                        -v "${PWD}":/app \
+                        -w /app \
+                        python:3.9-slim /bin/bash -c "pip install -r requirements.txt && python -m pytest test_calculator.py"
+                    '''
+                    
+                    echo "Tests passed successfully in isolated Docker environment!"
                 }
             }
         }
 
         stage('Create Docker Image') {
             steps {
-                echo "--- Building Docker image: ${env.DOCKER_IMAGE}:latest"
-                // The '.' means use the Dockerfile in the current directory (workspace)
+                echo "--- Building final Docker image: ${env.DOCKER_IMAGE}:latest"
+                // This uses the Dockerfile in your workspace to build the final image
                 sh "docker build -t ${env.DOCKER_IMAGE}:latest ."
             }
         }
 
         stage('Push to Docker Hub') {
             steps {
-                // Use the Jenkins credentials configured in Step 1
+                // Use the Jenkins credentials configured with ID 'docker-hub-credentials'
                 withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PASSWORD', usernameVariable: 'DOCKER_USER')]) {
                     echo "--- Logging in and pushing to Docker Hub..."
                     
