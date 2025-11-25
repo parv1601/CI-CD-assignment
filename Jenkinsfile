@@ -6,7 +6,7 @@ pipeline {
         // This ensures the pipeline uses the correct version of Python/Pip
         // This tool must be configured under Manage Jenkins -> Global Tool Configuration
         // Alternatively, you can rely on the OS PATH if python is installed on the agent
-        // python 'Python-3.9' 
+        python 'Python-3.10' 
     }
 
     environment {
