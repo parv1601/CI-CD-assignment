@@ -19,7 +19,7 @@ def divide(x, y):
 
 if __name__ == "__main__":
     print("Simple CLI Calculator")
-    a = 17
+    a = 27
     b = 5
     print(f"Adding {a} + {b} = {add(a, b)}")
     print(f"Subtracting {a} - {b} = {subtract(a, b)}")
